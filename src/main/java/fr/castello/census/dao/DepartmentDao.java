@@ -23,6 +23,13 @@ public class DepartmentDao {
         return Optional.ofNullable(em.find(Department.class, id));
     }
 
+    public Optional<Department> findByCode(String code) {
+        return em.createQuery("SELECT d FROM Department d WHERE d.code = :code", Department.class)
+                .setParameter("code", code)
+                .getResultStream()
+                .findFirst();
+    }
+
     public boolean existsByCode(String code) {
         TypedQuery<Long> query = em.createQuery(
                 "SELECT COUNT(d) FROM Department d WHERE d.code = :code", Long.class);

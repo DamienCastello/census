@@ -45,6 +45,25 @@ public class CityDao {
                 .getResultList();
     }
 
+    public List<City> findLargestByDepartment(Long departmentId, int count) {
+        return em.createQuery(
+                        "SELECT c FROM City c WHERE c.department.id = :depId ORDER BY c.population DESC",
+                        City.class)
+                .setParameter("depId", departmentId)
+                .setMaxResults(count)
+                .getResultList();
+    }
+
+    public List<City> findByPopulationBetweenAndDepartment(Long departmentId, int min, int max) {
+        return em.createQuery(
+                        "SELECT c FROM City c WHERE c.department.id = :depId AND c.population BETWEEN :min AND :max",
+                        City.class)
+                .setParameter("depId", departmentId)
+                .setParameter("min", min)
+                .setParameter("max", max)
+                .getResultList();
+    }
+
     public boolean existsByName(String name) {
         TypedQuery<Long> query = em.createQuery(
                 "SELECT COUNT(c) FROM City c WHERE c.name = :name", Long.class);

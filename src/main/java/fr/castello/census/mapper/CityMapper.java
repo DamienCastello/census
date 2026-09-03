@@ -2,6 +2,7 @@ package fr.castello.census.mapper;
 
 import fr.castello.census.dto.CityDto;
 import fr.castello.census.entity.City;
+import fr.castello.census.entity.Department;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -19,8 +20,10 @@ public class CityMapper {
      * @return le DTO correspondant
      */
     public CityDto toDto(City city) {
-        Long departmentId = city.getDepartment() != null ? city.getDepartment().getId() : null;
-        return new CityDto(city.getId(), city.getName(), city.getPopulation(), departmentId);
+        Department department = city.getDepartment();
+        Long departmentId = department != null ? department.getId() : null;
+        String departmentCode = department != null ? department.getCode() : null;
+        return new CityDto(city.getId(), city.getName(), city.getPopulation(), departmentId, departmentCode);
     }
 
     /**

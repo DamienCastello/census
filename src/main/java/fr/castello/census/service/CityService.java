@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class CityService {
@@ -128,7 +129,7 @@ public class CityService {
             throw new FunctionalException("La ville existe déjà");
         }
 
-        Department department = resolveDepartment(dto.departmentId());
+        Department department = resolveOrCreateDepartment(dto.departmentId(), dto.departmentCode());
         City city = cityMapper.toEntity(dto);
         department.addCity(city);
 
@@ -158,7 +159,7 @@ public class CityService {
             throw new FunctionalException("La ville existe déjà");
         }
 
-        Department department = resolveDepartment(dto.departmentId());
+        Department department = resolveOrCreateDepartment(dto.departmentId(), dto.departmentCode());
         existing.setName(dto.name());
         existing.setPopulation(dto.population());
         reassignDepartment(existing, department);
@@ -196,18 +197,80 @@ public class CityService {
     }
 
     /**
-     * Résout le département de rattachement (obligatoire) à partir de son identifiant.
+     * Résout le département de rattachement (obligatoire) à partir de son id et/ou de son code.
+     *
+     * <p>Règles : on tente d'abord la résolution par identifiant, puis par code. Si le
+     * département reste introuvable mais qu'un code est fourni, il est <strong>créé</strong> ;
+     * sinon une exception « Département inconnu » est levée.</p>
+     *
+     * @param departmentId   identifiant du département (peut être {@code null})
+     * @param departmentCode code du département (peut être {@code null})
+     * @return le département géré correspondant (existant ou nouvellement créé)
+     * @throws FunctionalException si le département est introuvable et qu'aucun code n'est fourni
+     */
+    private Department resolveOrCreateDepartment(Long departmentId, String departmentCode) throws FunctionalException {
+        if (departmentId != null) {
+            Optional<Department> byId = departmentDao.findById(departmentId);
+            if (byId.isPresent()) {
+                return byId.get();
+            }
+        }
+        if (departmentCode != null && !departmentCode.isBlank()) {
+            return departmentDao.findByCode(departmentCode)
+                    .orElseGet(() -> departmentDao.create(new Department(departmentCode, departmentCode)));
+        }
+        throw new FunctionalException("Département inconnu");
+    }
+
+    /**
+     * Retourne les {@code count} plus grandes villes (par population) d'un département.
      *
      * @param departmentId identifiant du département
-     * @return le département géré correspondant
-     * @throws FunctionalException si l'identifiant est absent ou introuvable
+     * @param count        nombre maximum de villes à retourner
+     * @return la liste des villes correspondantes, de la plus peuplée à la moins peuplée
+     * @throws FunctionalException si {@code count} n'est pas positif
+     * @throws NotFoundException   si le département n'existe pas
      */
-    private Department resolveDepartment(Long departmentId) throws FunctionalException {
-        if (departmentId == null) {
-            throw new FunctionalException("Le département est obligatoire");
+    @Transactional(readOnly = true)
+    public List<CityDto> extractLargestByDepartment(Long departmentId, int count) throws FunctionalException {
+        if (count <= 0) {
+            throw new FunctionalException("Le nombre de villes demandé doit être supérieur à 0");
         }
-        return departmentDao.findById(departmentId)
-                .orElseThrow(() -> new FunctionalException("Le département " + departmentId + " n'existe pas"));
+        ensureDepartmentExists(departmentId);
+        return cityMapper.toDtoList(cityDao.findLargestByDepartment(departmentId, count));
+    }
+
+    /**
+     * Retourne les villes d'un département dont la population est comprise entre {@code min} et
+     * {@code max} (bornes incluses).
+     *
+     * @param departmentId identifiant du département
+     * @param min          population minimale
+     * @param max          population maximale
+     * @return la liste des villes correspondantes (éventuellement vide)
+     * @throws FunctionalException si {@code min} est supérieur à {@code max}
+     * @throws NotFoundException   si le département n'existe pas
+     */
+    @Transactional(readOnly = true)
+    public List<CityDto> extractByPopulationBetweenInDepartment(Long departmentId, int min, int max)
+            throws FunctionalException {
+        if (min > max) {
+            throw new FunctionalException("La population minimale doit être inférieure ou égale à la maximale");
+        }
+        ensureDepartmentExists(departmentId);
+        return cityMapper.toDtoList(cityDao.findByPopulationBetweenAndDepartment(departmentId, min, max));
+    }
+
+    /**
+     * Vérifie l'existence d'un département.
+     *
+     * @param departmentId identifiant du département
+     * @throws NotFoundException si aucun département ne correspond
+     */
+    private void ensureDepartmentExists(Long departmentId) throws NotFoundException {
+        if (departmentId == null || departmentDao.findById(departmentId).isEmpty()) {
+            throw new NotFoundException("Département non trouvé");
+        }
     }
 
     /**

@@ -1,8 +1,10 @@
 package fr.castello.census.controller;
 
 import fr.castello.census.config.DepartmentControllerDoc;
+import fr.castello.census.dto.CityDto;
 import fr.castello.census.dto.DepartmentDto;
 import fr.castello.census.exception.FunctionalException;
+import fr.castello.census.service.CityService;
 import fr.castello.census.service.DepartmentService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,9 +17,11 @@ import java.util.List;
 public class DepartmentController implements DepartmentControllerDoc {
 
     private final DepartmentService departmentService;
+    private final CityService cityService;
 
-    public DepartmentController(DepartmentService departmentService) {
+    public DepartmentController(DepartmentService departmentService, CityService cityService) {
         this.departmentService = departmentService;
+        this.cityService = cityService;
     }
 
     @GetMapping
@@ -58,5 +62,22 @@ public class DepartmentController implements DepartmentControllerDoc {
             @PathVariable Long cityId
     ) throws FunctionalException {
         return departmentService.assignCity(departmentId, cityId);
+    }
+
+    @GetMapping("/{departmentId}/cities/largest")
+    public List<CityDto> getLargestCities(
+            @PathVariable Long departmentId,
+            @RequestParam int count
+    ) throws FunctionalException {
+        return cityService.extractLargestByDepartment(departmentId, count);
+    }
+
+    @GetMapping("/{departmentId}/cities")
+    public List<CityDto> getCitiesByPopulation(
+            @PathVariable Long departmentId,
+            @RequestParam int minPop,
+            @RequestParam int maxPop
+    ) throws FunctionalException {
+        return cityService.extractByPopulationBetweenInDepartment(departmentId, minPop, maxPop);
     }
 }

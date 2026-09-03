@@ -1,5 +1,6 @@
 package fr.castello.census.config;
 
+import fr.castello.census.dto.CityDto;
 import fr.castello.census.dto.DepartmentDto;
 import fr.castello.census.exception.FunctionalException;
 import io.swagger.v3.oas.annotations.Operation;
@@ -222,5 +223,107 @@ public interface DepartmentControllerDoc {
                     required = true
             )
             Long cityId
+    ) throws FunctionalException;
+
+
+    /**
+     * Liste les n plus grandes villes (par population) d'un département.
+     *
+     * @param departmentId Identifiant du département
+     * @param count        Nombre maximum de villes à retourner
+     * @return Les villes les plus peuplées du département
+     */
+    @Operation(summary = "Liste les n plus grandes villes d'un département")
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Villes triées de la plus peuplée à la moins peuplée",
+                    content = @Content(
+                            mediaType = "application/json",
+                            array = @ArraySchema(
+                                    schema = @Schema(implementation = CityDto.class)
+                            )
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Nombre de villes invalide",
+                    content = @Content()
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Département non trouvé",
+                    content = @Content()
+            )
+    })
+    List<CityDto> getLargestCities(
+            @Parameter(
+                    description = "Identifiant du département",
+                    example = "1",
+                    required = true
+            )
+            Long departmentId,
+
+            @Parameter(
+                    description = "Nombre de villes à retourner",
+                    example = "3",
+                    required = true
+            )
+            int count
+    ) throws FunctionalException;
+
+
+    /**
+     * Liste les villes d'un département dont la population est comprise entre deux valeurs.
+     *
+     * @param departmentId Identifiant du département
+     * @param minPop       Population minimale
+     * @param maxPop       Population maximale
+     * @return Les villes correspondantes du département
+     */
+    @Operation(summary = "Liste les villes d'un département dont la population est comprise entre deux valeurs")
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Villes correspondantes (éventuellement vide)",
+                    content = @Content(
+                            mediaType = "application/json",
+                            array = @ArraySchema(
+                                    schema = @Schema(implementation = CityDto.class)
+                            )
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Bornes de population invalides",
+                    content = @Content()
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Département non trouvé",
+                    content = @Content()
+            )
+    })
+    List<CityDto> getCitiesByPopulation(
+            @Parameter(
+                    description = "Identifiant du département",
+                    example = "1",
+                    required = true
+            )
+            Long departmentId,
+
+            @Parameter(
+                    description = "Population minimale",
+                    example = "1000",
+                    required = true
+            )
+            int minPop,
+
+            @Parameter(
+                    description = "Population maximale",
+                    example = "100000",
+                    required = true
+            )
+            int maxPop
     ) throws FunctionalException;
 }
