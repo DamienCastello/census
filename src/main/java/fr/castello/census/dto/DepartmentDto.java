@@ -12,8 +12,8 @@ import java.util.List;
  *
  * @param id     identifiant du département (ignoré en création, positionné en sortie)
  * @param code   code du département
- * @param nom    nom du département
+ * @param name   nom du département (peut être absent sur les données importées)
  * @param cities villes rattachées (ignoré en entrée, renseigné en sortie)
  */
-public record DepartmentDto(Long id, String code, String nom, List<CityDto> cities) {
+public record DepartmentDto(Long id, String code, String name, List<CityDto> cities) {
 }

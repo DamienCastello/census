@@ -1,14 +1,18 @@
 package fr.castello.census.service;
 
-import fr.castello.census.dao.CityDao;
-import fr.castello.census.dao.DepartmentDao;
 import fr.castello.census.dto.CityDto;
+import fr.castello.census.dto.PageDto;
 import fr.castello.census.entity.City;
 import fr.castello.census.entity.Department;
 import fr.castello.census.exception.FunctionalException;
 import fr.castello.census.exception.NotFoundException;
 import fr.castello.census.mapper.CityMapper;
+import fr.castello.census.repository.CityRepository;
+import fr.castello.census.repository.DepartmentRepository;
 import fr.castello.census.util.CsvUtils;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,40 +22,28 @@ import java.util.Optional;
 @Service
 public class CityService {
 
-    private final CityDao cityDao;
-    private final DepartmentDao departmentDao;
+    private final CityRepository cityRepository;
+    private final DepartmentRepository departmentRepository;
     private final CityMapper cityMapper;
 
-    public CityService(CityDao cityDao, DepartmentDao departmentDao, CityMapper cityMapper) {
-        this.cityDao = cityDao;
-        this.departmentDao = departmentDao;
+    public CityService(CityRepository cityRepository,
+                       DepartmentRepository departmentRepository,
+                       CityMapper cityMapper) {
+        this.cityRepository = cityRepository;
+        this.departmentRepository = departmentRepository;
         this.cityMapper = cityMapper;
     }
 
     /**
-     * Insère un jeu de données de départ en base (un département et ses villes).
-     */
-    @Transactional
-    public void initData() {
-        Department dep = departmentDao.create(new Department("13", "Bouches-du-Rhône"));
-
-        City totocity = new City("Totocity", 10);
-        City arles = new City("Arles", 55000);
-        dep.addCity(totocity);
-        dep.addCity(arles);
-
-        cityDao.create(totocity);
-        cityDao.create(arles);
-    }
-
-    /**
-     * Retourne toutes les villes présentes en base.
+     * Retourne une page de villes.
      *
-     * @return la liste des villes
+     * @param pageable page demandée (numéro, taille, tri)
+     * @return la page de villes correspondante
      */
     @Transactional(readOnly = true)
-    public List<CityDto> extractAll() {
-        return cityMapper.toDtoList(cityDao.extractAll());
+    public PageDto<CityDto> extractAll(Pageable pageable) {
+        Page<City> page = cityRepository.findAll(pageable);
+        return PageDto.of(page, cityMapper.toDtoList(page.getContent()));
     }
 
     /**
@@ -63,7 +55,7 @@ public class CityService {
      */
     @Transactional(readOnly = true)
     public CityDto extractById(Long id) throws NotFoundException {
-        City city = cityDao.findById(id)
+        City city = cityRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Ville non trouvée"));
         return cityMapper.toDto(city);
     }
@@ -80,7 +72,7 @@ public class CityService {
         if (prefix == null || prefix.isBlank()) {
             throw new FunctionalException("Le préfixe de recherche est obligatoire");
         }
-        return cityMapper.toDtoList(cityDao.findByNameStartingWith(prefix));
+        return cityMapper.toDtoList(cityRepository.findByNameStartingWithIgnoreCase(prefix));
     }
 
     /**
@@ -95,7 +87,7 @@ public class CityService {
         if (min < 0) {
             throw new FunctionalException("La population ne peut pas être négative");
         }
-        return cityMapper.toDtoList(cityDao.findByPopulationGreaterThan(min));
+        return cityMapper.toDtoList(cityRepository.findByPopulationGreaterThanOrderByPopulationDesc(min));
     }
 
     /**
@@ -111,7 +103,7 @@ public class CityService {
         if (min > max) {
             throw new FunctionalException("La population minimale doit être inférieure ou égale à la maximale");
         }
-        return cityMapper.toDtoList(cityDao.findByPopulationBetween(min, max));
+        return cityMapper.toDtoList(cityRepository.findByPopulationBetweenOrderByPopulationDesc(min, max));
     }
 
     /**
@@ -126,15 +118,16 @@ public class CityService {
     public CityDto createCity(CityDto dto) throws FunctionalException {
         validateCity(dto);
 
-        if (cityDao.existsByName(dto.name())) {
-            throw new FunctionalException("La ville existe déjà");
+        Department department = resolveOrCreateDepartment(dto.departmentId(), dto.departmentCode());
+
+        if (cityRepository.existsByNameAndDepartmentId(dto.name(), department.getId())) {
+            throw new FunctionalException("La ville existe déjà dans ce département");
         }
 
-        Department department = resolveOrCreateDepartment(dto.departmentId(), dto.departmentCode());
         City city = cityMapper.toEntity(dto);
         department.addCity(city);
 
-        City created = cityDao.create(city);
+        City created = cityRepository.save(city);
         return cityMapper.toDto(created);
     }
 
@@ -152,15 +145,19 @@ public class CityService {
     public CityDto updateCity(Long id, CityDto dto) throws FunctionalException {
         validateCity(dto);
 
-        City existing = cityDao.findById(id)
+        City existing = cityRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Ville non trouvée"));
 
-        // Le nom doit rester unique, sauf s'il s'agit du nom actuel de la ville modifiée.
-        if (!existing.getName().equals(dto.name()) && cityDao.existsByName(dto.name())) {
-            throw new FunctionalException("La ville existe déjà");
+        Department department = resolveOrCreateDepartment(dto.departmentId(), dto.departmentCode());
+
+        // Le nom doit rester unique au sein du département cible, sauf s'il s'agit
+        // du couple (nom, département) actuel de la ville modifiée.
+        boolean sameCity = existing.getName().equals(dto.name())
+                && existing.getDepartment().getId() == department.getId();
+        if (!sameCity && cityRepository.existsByNameAndDepartmentId(dto.name(), department.getId())) {
+            throw new FunctionalException("La ville existe déjà dans ce département");
         }
 
-        Department department = resolveOrCreateDepartment(dto.departmentId(), dto.departmentCode());
         existing.setName(dto.name());
         existing.setPopulation(dto.population());
         reassignDepartment(existing, department);
@@ -177,9 +174,9 @@ public class CityService {
      */
     @Transactional
     public void deleteCity(Long id) throws NotFoundException {
-        City existing = cityDao.findById(id)
+        City existing = cityRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Ville non trouvée"));
-        cityDao.delete(existing);
+        cityRepository.delete(existing);
     }
 
     /**
@@ -195,7 +192,7 @@ public class CityService {
         StringBuilder csv = new StringBuilder(
                 CsvUtils.line("id", "name", "population", "departmentCode"));
 
-        for (CityDto city : cityMapper.toDtoList(cityDao.extractAll())) {
+        for (CityDto city : cityMapper.toDtoList(cityRepository.findAll())) {
             csv.append(CsvUtils.line(city.id(), city.name(), city.population(), city.departmentCode()));
         }
         return csv.toString();
@@ -230,14 +227,14 @@ public class CityService {
      */
     private Department resolveOrCreateDepartment(Long departmentId, String departmentCode) throws FunctionalException {
         if (departmentId != null) {
-            Optional<Department> byId = departmentDao.findById(departmentId);
+            Optional<Department> byId = departmentRepository.findById(departmentId);
             if (byId.isPresent()) {
                 return byId.get();
             }
         }
         if (departmentCode != null && !departmentCode.isBlank()) {
-            return departmentDao.findByCode(departmentCode)
-                    .orElseGet(() -> departmentDao.create(new Department(departmentCode, departmentCode)));
+            return departmentRepository.findByCode(departmentCode)
+                    .orElseGet(() -> departmentRepository.save(new Department(departmentCode, departmentCode)));
         }
         throw new FunctionalException("Département inconnu");
     }
@@ -257,7 +254,7 @@ public class CityService {
             throw new FunctionalException("Le nombre de villes demandé doit être supérieur à 0");
         }
         ensureDepartmentExists(departmentId);
-        return cityMapper.toDtoList(cityDao.findLargestByDepartment(departmentId, count));
+        return cityMapper.toDtoList(cityRepository.findByDepartmentIdOrderByPopulationDesc(departmentId, PageRequest.of(0, count)));
     }
 
     /**
@@ -278,7 +275,28 @@ public class CityService {
             throw new FunctionalException("La population minimale doit être inférieure ou égale à la maximale");
         }
         ensureDepartmentExists(departmentId);
-        return cityMapper.toDtoList(cityDao.findByPopulationBetweenAndDepartment(departmentId, min, max));
+        return cityMapper.toDtoList(cityRepository.findByDepartmentIdAndPopulationBetweenOrderByPopulationDesc(departmentId, min, max));
+    }
+
+    /**
+     * Retourne les villes d'un département dont la population est strictement supérieure à {@code min},
+     * de la plus peuplée à la moins peuplée.
+     *
+     * @param departmentId identifiant du département
+     * @param min          population minimale (exclue)
+     * @return la liste des villes correspondantes (éventuellement vide)
+     * @throws FunctionalException si {@code min} est négatif
+     * @throws NotFoundException   si le département n'existe pas
+     */
+    @Transactional(readOnly = true)
+    public List<CityDto> extractByPopulationGreaterThanInDepartment(Long departmentId, int min)
+            throws FunctionalException {
+        if (min < 0) {
+            throw new FunctionalException("La population ne peut pas être négative");
+        }
+        ensureDepartmentExists(departmentId);
+        return cityMapper.toDtoList(
+                cityRepository.findByDepartmentIdAndPopulationGreaterThanOrderByPopulationDesc(departmentId, min));
     }
 
     /**
@@ -288,7 +306,7 @@ public class CityService {
      * @throws NotFoundException si aucun département ne correspond
      */
     private void ensureDepartmentExists(Long departmentId) throws NotFoundException {
-        if (departmentId == null || departmentDao.findById(departmentId).isEmpty()) {
+        if (departmentId == null || departmentRepository.findById(departmentId).isEmpty()) {
             throw new NotFoundException("Département non trouvé");
         }
     }

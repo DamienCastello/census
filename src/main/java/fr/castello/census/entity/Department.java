@@ -17,17 +17,18 @@ public class Department {
     @Column(length = 10, nullable = false, unique = true)
     private String code;
 
-    @Column(length = 100, nullable = false)
-    private String nom;
+    // Nullable : le jeu de données importé ne renseigne pas le nom des départements.
+    @Column(length = 100)
+    private String name;
 
     @OneToMany(mappedBy = "department")
     private List<City> cities = new ArrayList<>();
 
     public Department() {}
 
-    public Department(String code, String nom) {
+    public Department(String code, String name) {
         this.code = code;
-        this.nom = nom;
+        this.name = name;
     }
 
     public long getId() {
@@ -42,12 +43,12 @@ public class Department {
         this.code = code;
     }
 
-    public String getNom() {
-        return nom;
+    public String getName() {
+        return name;
     }
 
-    public void setNom(String nom) {
-        this.nom = nom;
+    public void setName(String name) {
+        this.name = name;
     }
 
     public List<City> getCities() {
@@ -71,16 +72,16 @@ public class Department {
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
         Department that = (Department) o;
-        return id == that.id && Objects.equals(code, that.code) && Objects.equals(nom, that.nom);
+        return id == that.id && Objects.equals(code, that.code) && Objects.equals(name, that.name);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, code, nom);
+        return Objects.hash(id, code, name);
     }
 
     @Override
     public String toString() {
-        return "Departement{code='" + code + "', nom='" + nom + "'}";
+        return "Department{code='" + code + "', name='" + name + "'}";
     }
 }

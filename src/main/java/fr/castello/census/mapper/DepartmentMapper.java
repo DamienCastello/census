@@ -31,7 +31,7 @@ public class DepartmentMapper {
         return new DepartmentDto(
                 department.getId(),
                 department.getCode(),
-                department.getNom(),
+                department.getName(),
                 cityMapper.toDtoList(department.getCities()));
     }
 
@@ -52,6 +52,6 @@ public class DepartmentMapper {
      * @return une entité non persistée
      */
     public Department toEntity(DepartmentDto dto) {
-        return new Department(dto.code(), dto.nom());
+        return new Department(dto.code(), dto.name());
     }
 }

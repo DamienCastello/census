@@ -345,4 +345,51 @@ public interface DepartmentControllerDoc {
             )
             int maxPop
     ) throws FunctionalException;
+
+
+    /**
+     * Liste les villes d'un département dont la population dépasse une valeur.
+     *
+     * @param departmentId Identifiant du département
+     * @param population   Population minimale (exclue)
+     * @return Les villes correspondantes, les plus peuplées d'abord
+     */
+    @Operation(summary = "Liste les villes d'un département dont la population dépasse une valeur")
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Villes correspondantes, triées par population décroissante",
+                    content = @Content(
+                            mediaType = "application/json",
+                            array = @ArraySchema(
+                                    schema = @Schema(implementation = CityDto.class)
+                            )
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Population négative",
+                    content = @Content()
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Département non trouvé",
+                    content = @Content()
+            )
+    })
+    List<CityDto> getCitiesGreaterInDepartment(
+            @Parameter(
+                    description = "Identifiant du département",
+                    example = "1",
+                    required = true
+            )
+            Long departmentId,
+
+            @Parameter(
+                    description = "Population minimale recherchée",
+                    example = "50000",
+                    required = true
+            )
+            int population
+    ) throws FunctionalException;
 }

@@ -76,13 +76,21 @@ public class DepartmentController implements DepartmentControllerDoc {
         return cityService.extractLargestByDepartment(departmentId, count);
     }
 
-    @GetMapping("/{departmentId}/cities")
+    @GetMapping(value = "/{departmentId}/cities", params = {"minPop", "maxPop"})
     public List<CityDto> getCitiesByPopulation(
             @PathVariable Long departmentId,
             @RequestParam int minPop,
             @RequestParam int maxPop
     ) throws FunctionalException {
         return cityService.extractByPopulationBetweenInDepartment(departmentId, minPop, maxPop);
+    }
+
+    @GetMapping(value = "/{departmentId}/cities", params = {"population", "!minPop", "!maxPop"})
+    public List<CityDto> getCitiesGreaterInDepartment(
+            @PathVariable Long departmentId,
+            @RequestParam int population
+    ) throws FunctionalException {
+        return cityService.extractByPopulationGreaterThanInDepartment(departmentId, population);
     }
 
     @GetMapping(value = "/export/csv", produces = "text/csv")

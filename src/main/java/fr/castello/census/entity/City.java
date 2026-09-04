@@ -11,7 +11,9 @@ public class City {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
-    @Column(length = 30, nullable = false, unique = true)
+    // Pas d'unicité globale : deux départements peuvent avoir une ville homonyme
+    // (Saint-Denis, La Trinité…). L'unicité est contrôlée par département dans le service.
+    @Column(length = 30, nullable = false)
     private String name;
 
     @Column(nullable = false)

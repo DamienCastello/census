@@ -1,7 +1,9 @@
 package fr.castello.census.config;
 
 import fr.castello.census.dto.CityDto;
+import fr.castello.census.dto.PageDto;
 import fr.castello.census.exception.FunctionalException;
+import org.springframework.data.domain.Pageable;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -20,20 +22,19 @@ public interface CityControllerDoc {
      *
      * @return Liste de CityDto
      */
-    @Operation(summary = "Retourne la liste de toutes les villes")
+    @Operation(summary = "Retourne une page de villes",
+            description = "Pagination via les paramètres page, size et sort (ex. ?page=0&size=20&sort=population,desc)")
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
-                    description = "Liste des villes au format JSON",
+                    description = "Page de villes au format JSON",
                     content = @Content(
                             mediaType = "application/json",
-                            array = @ArraySchema(
-                                    schema = @Schema(implementation = CityDto.class)
-                            )
+                            schema = @Schema(implementation = PageDto.class)
                     )
             )
     })
-    List<CityDto> getAll();
+    PageDto<CityDto> getAll(Pageable pageable);
 
 
     /**

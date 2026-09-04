@@ -2,9 +2,11 @@ package fr.castello.census.controller;
 
 import fr.castello.census.config.CityControllerDoc;
 import fr.castello.census.dto.CityDto;
+import fr.castello.census.dto.PageDto;
 import fr.castello.census.exception.FunctionalException;
 import fr.castello.census.service.CityService;
-import jakarta.annotation.PostConstruct;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -25,14 +27,9 @@ public class CityController implements CityControllerDoc {
         this.cityService = cityService;
     }
 
-    @PostConstruct
-    public void initData() {
-        cityService.initData();
-    }
-
     @GetMapping(params = {"!name", "!population", "!minPop", "!maxPop"})
-    public List<CityDto> getAll() {
-        return cityService.extractAll();
+    public PageDto<CityDto> getAll(@PageableDefault(size = 20) Pageable pageable) {
+        return cityService.extractAll(pageable);
     }
 
     @GetMapping("/{id}")

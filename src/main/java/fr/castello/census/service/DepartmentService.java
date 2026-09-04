@@ -1,13 +1,13 @@
 package fr.castello.census.service;
 
-import fr.castello.census.dao.CityDao;
-import fr.castello.census.dao.DepartmentDao;
 import fr.castello.census.dto.DepartmentDto;
 import fr.castello.census.entity.City;
 import fr.castello.census.entity.Department;
 import fr.castello.census.exception.FunctionalException;
 import fr.castello.census.exception.NotFoundException;
 import fr.castello.census.mapper.DepartmentMapper;
+import fr.castello.census.repository.CityRepository;
+import fr.castello.census.repository.DepartmentRepository;
 import fr.castello.census.util.CsvUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,13 +17,15 @@ import java.util.List;
 @Service
 public class DepartmentService {
 
-    private final DepartmentDao departmentDao;
-    private final CityDao cityDao;
+    private final DepartmentRepository departmentRepository;
+    private final CityRepository cityRepository;
     private final DepartmentMapper departmentMapper;
 
-    public DepartmentService(DepartmentDao departmentDao, CityDao cityDao, DepartmentMapper departmentMapper) {
-        this.departmentDao = departmentDao;
-        this.cityDao = cityDao;
+    public DepartmentService(DepartmentRepository departmentRepository,
+                             CityRepository cityRepository,
+                             DepartmentMapper departmentMapper) {
+        this.departmentRepository = departmentRepository;
+        this.cityRepository = cityRepository;
         this.departmentMapper = departmentMapper;
     }
 
@@ -34,7 +36,7 @@ public class DepartmentService {
      */
     @Transactional(readOnly = true)
     public List<DepartmentDto> extractAll() {
-        return departmentMapper.toDtoList(departmentDao.extractAll());
+        return departmentMapper.toDtoList(departmentRepository.findAll());
     }
 
     /**
@@ -50,9 +52,9 @@ public class DepartmentService {
         StringBuilder csv = new StringBuilder(
                 CsvUtils.line("id", "code", "nom", "cityCount"));
 
-        for (DepartmentDto department : departmentMapper.toDtoList(departmentDao.extractAll())) {
+        for (DepartmentDto department : departmentMapper.toDtoList(departmentRepository.findAll())) {
             csv.append(CsvUtils.line(
-                    department.id(), department.code(), department.nom(), department.cities().size()));
+                    department.id(), department.code(), department.name(), department.cities().size()));
         }
         return csv.toString();
     }
@@ -66,7 +68,7 @@ public class DepartmentService {
      */
     @Transactional(readOnly = true)
     public DepartmentDto extractById(Long id) throws NotFoundException {
-        Department department = departmentDao.findById(id)
+        Department department = departmentRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Département non trouvé"));
         return departmentMapper.toDto(department);
     }
@@ -82,11 +84,11 @@ public class DepartmentService {
     public DepartmentDto createDepartment(DepartmentDto dto) throws FunctionalException {
         validateDepartment(dto);
 
-        if (departmentDao.existsByCode(dto.code())) {
+        if (departmentRepository.existsByCode(dto.code())) {
             throw new FunctionalException("Le département existe déjà");
         }
 
-        Department created = departmentDao.create(departmentMapper.toEntity(dto));
+        Department created = departmentRepository.save(departmentMapper.toEntity(dto));
         return departmentMapper.toDto(created);
     }
 
@@ -103,16 +105,16 @@ public class DepartmentService {
     public DepartmentDto updateDepartment(Long id, DepartmentDto dto) throws FunctionalException {
         validateDepartment(dto);
 
-        Department existing = departmentDao.findById(id)
+        Department existing = departmentRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Département non trouvé"));
 
         // Le code doit rester unique, sauf s'il s'agit du code actuel du département modifié.
-        if (!existing.getCode().equals(dto.code()) && departmentDao.existsByCode(dto.code())) {
+        if (!existing.getCode().equals(dto.code()) && departmentRepository.existsByCode(dto.code())) {
             throw new FunctionalException("Le département existe déjà");
         }
 
         existing.setCode(dto.code());
-        existing.setNom(dto.nom());
+        existing.setName(dto.name());
         return departmentMapper.toDto(existing);
     }
 
@@ -127,14 +129,14 @@ public class DepartmentService {
      */
     @Transactional
     public void deleteDepartment(Long id) throws FunctionalException {
-        Department existing = departmentDao.findById(id)
+        Department existing = departmentRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Département non trouvé"));
 
         if (!existing.getCities().isEmpty()) {
             throw new FunctionalException("Impossible de supprimer un département qui possède des villes");
         }
 
-        departmentDao.delete(existing);
+        departmentRepository.delete(existing);
     }
 
     /**
@@ -147,9 +149,9 @@ public class DepartmentService {
      */
     @Transactional
     public DepartmentDto assignCity(Long departmentId, Long cityId) throws NotFoundException {
-        Department department = departmentDao.findById(departmentId)
+        Department department = departmentRepository.findById(departmentId)
                 .orElseThrow(() -> new NotFoundException("Département non trouvé"));
-        City city = cityDao.findById(cityId)
+        City city = cityRepository.findById(cityId)
                 .orElseThrow(() -> new NotFoundException("Ville non trouvée"));
 
         Department current = city.getDepartment();
@@ -174,7 +176,7 @@ public class DepartmentService {
         if (department.code() == null || department.code().isBlank()) {
             throw new FunctionalException("Le code du département est obligatoire");
         }
-        if (department.nom() == null || department.nom().isBlank() || department.nom().length() < 2) {
+        if (department.name() == null || department.name().isBlank() || department.name().length() < 2) {
             throw new FunctionalException("Le nom du département doit contenir au moins 2 caractères");
         }
     }
