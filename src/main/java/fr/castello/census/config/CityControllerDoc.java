@@ -179,6 +179,25 @@ public interface CityControllerDoc {
 
 
     /**
+     * Exporte toutes les villes au format CSV.
+     *
+     * @return Le fichier CSV, proposé en téléchargement
+     */
+    @Operation(summary = "Exporte toutes les villes au format CSV")
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Fichier CSV des villes (id;name;population;departmentCode)",
+                    content = @Content(
+                            mediaType = "text/csv",
+                            schema = @Schema(type = "string")
+                    )
+            )
+    })
+    ResponseEntity<String> exportCsv();
+
+
+    /**
      * Crée une nouvelle ville.
      *
      * @param city Ville à créer

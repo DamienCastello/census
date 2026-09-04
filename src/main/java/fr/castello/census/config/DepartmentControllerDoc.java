@@ -70,6 +70,25 @@ public interface DepartmentControllerDoc {
 
 
     /**
+     * Exporte tous les départements au format CSV.
+     *
+     * @return Le fichier CSV, proposé en téléchargement
+     */
+    @Operation(summary = "Exporte tous les départements au format CSV")
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Fichier CSV des départements (id;code;nom;cityCount)",
+                    content = @Content(
+                            mediaType = "text/csv",
+                            schema = @Schema(type = "string")
+                    )
+            )
+    })
+    ResponseEntity<String> exportCsv();
+
+
+    /**
      * Crée un nouveau département.
      *
      * @param department Département à créer

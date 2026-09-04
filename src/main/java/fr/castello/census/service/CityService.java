@@ -8,6 +8,7 @@ import fr.castello.census.entity.Department;
 import fr.castello.census.exception.FunctionalException;
 import fr.castello.census.exception.NotFoundException;
 import fr.castello.census.mapper.CityMapper;
+import fr.castello.census.util.CsvUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -179,6 +180,25 @@ public class CityService {
         City existing = cityDao.findById(id)
                 .orElseThrow(() -> new NotFoundException("Ville non trouvée"));
         cityDao.delete(existing);
+    }
+
+    /**
+     * Produit l'export CSV de toutes les villes.
+     *
+     * <p>Le service génère uniquement le <em>contenu</em> : le transport (en-têtes HTTP,
+     * nom du fichier, encodage) relève de la couche web.</p>
+     *
+     * @return le contenu CSV : une ligne d'en-tête puis une ligne par ville
+     */
+    @Transactional(readOnly = true)
+    public String exportCsv() {
+        StringBuilder csv = new StringBuilder(
+                CsvUtils.line("id", "name", "population", "departmentCode"));
+
+        for (CityDto city : cityMapper.toDtoList(cityDao.extractAll())) {
+            csv.append(CsvUtils.line(city.id(), city.name(), city.population(), city.departmentCode()));
+        }
+        return csv.toString();
     }
 
     /**

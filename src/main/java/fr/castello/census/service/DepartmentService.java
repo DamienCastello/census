@@ -8,6 +8,7 @@ import fr.castello.census.entity.Department;
 import fr.castello.census.exception.FunctionalException;
 import fr.castello.census.exception.NotFoundException;
 import fr.castello.census.mapper.DepartmentMapper;
+import fr.castello.census.util.CsvUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +35,26 @@ public class DepartmentService {
     @Transactional(readOnly = true)
     public List<DepartmentDto> extractAll() {
         return departmentMapper.toDtoList(departmentDao.extractAll());
+    }
+
+    /**
+     * Produit l'export CSV de tous les départements.
+     *
+     * <p>Le service génère uniquement le <em>contenu</em> : le transport (en-têtes HTTP,
+     * nom du fichier, encodage) relève de la couche web.</p>
+     *
+     * @return le contenu CSV : une ligne d'en-tête puis une ligne par département
+     */
+    @Transactional(readOnly = true)
+    public String exportCsv() {
+        StringBuilder csv = new StringBuilder(
+                CsvUtils.line("id", "code", "nom", "cityCount"));
+
+        for (DepartmentDto department : departmentMapper.toDtoList(departmentDao.extractAll())) {
+            csv.append(CsvUtils.line(
+                    department.id(), department.code(), department.nom(), department.cities().size()));
+        }
+        return csv.toString();
     }
 
     /**

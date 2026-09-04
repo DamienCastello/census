@@ -6,10 +6,14 @@ import fr.castello.census.dto.DepartmentDto;
 import fr.castello.census.exception.FunctionalException;
 import fr.castello.census.service.CityService;
 import fr.castello.census.service.DepartmentService;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @RestController
@@ -79,5 +83,14 @@ public class DepartmentController implements DepartmentControllerDoc {
             @RequestParam int maxPop
     ) throws FunctionalException {
         return cityService.extractByPopulationBetweenInDepartment(departmentId, minPop, maxPop);
+    }
+
+    @GetMapping(value = "/export/csv", produces = "text/csv")
+    public ResponseEntity<String> exportCsv() {
+        return ResponseEntity.ok()
+                .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.attachment().filename("departments.csv").build().toString())
+                .body(departmentService.exportCsv());
     }
 }
