@@ -8,11 +8,11 @@ import fr.castello.census.service.CityService;
 import fr.castello.census.service.DepartmentService;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
@@ -41,9 +41,7 @@ public class DepartmentController implements DepartmentControllerDoc {
     @PostMapping
     public ResponseEntity<DepartmentDto> createDepartment(@RequestBody DepartmentDto department) throws FunctionalException {
         DepartmentDto created = departmentService.createDepartment(department);
-        return ResponseEntity
-                .created(URI.create("/departments/" + created.id()))
-                .body(created);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PutMapping("/{id}")
