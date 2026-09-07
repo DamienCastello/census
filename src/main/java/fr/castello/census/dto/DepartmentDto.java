@@ -1,5 +1,8 @@
 package fr.castello.census.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import java.util.List;
 
 /**
@@ -15,5 +18,13 @@ import java.util.List;
  * @param name   nom du département (peut être absent sur les données importées)
  * @param cities villes rattachées (ignoré en entrée, renseigné en sortie)
  */
-public record DepartmentDto(Long id, String code, String name, List<CityDto> cities) {
+@JsonIgnoreProperties(ignoreUnknown = true)
+public record DepartmentDto(
+        Long id,
+        String code,
+        // @JsonAlias : accepte aussi "nom" EN ENTREE, pour lire l'API geo.api.gouv.fr
+        // sans classe supplementaire. La sortie JSON reste "name" (contrairement a
+        // @JsonProperty, qui renommerait aussi le champ expose par notre API).
+        @JsonAlias("nom") String name,
+        List<CityDto> cities) {
 }

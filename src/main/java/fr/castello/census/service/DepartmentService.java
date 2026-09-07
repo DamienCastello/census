@@ -9,17 +9,32 @@ import fr.castello.census.mapper.DepartmentMapper;
 import fr.castello.census.repository.CityRepository;
 import fr.castello.census.repository.DepartmentRepository;
 import fr.castello.census.util.CsvUtils;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class DepartmentService {
 
+    private static final Logger log = LoggerFactory.getLogger(DepartmentService.class);
+    private static final String GEO_API_URL = "https://geo.api.gouv.fr/departements";
+
     private final DepartmentRepository departmentRepository;
     private final CityRepository cityRepository;
     private final DepartmentMapper departmentMapper;
+
+    /** Active ou non l'initialisation des noms de départements au démarrage. */
+    @Value("${application.init}")
+    private boolean initEnabled;
 
     public DepartmentService(DepartmentRepository departmentRepository,
                              CityRepository cityRepository,
@@ -27,6 +42,50 @@ public class DepartmentService {
         this.departmentRepository = departmentRepository;
         this.cityRepository = cityRepository;
         this.departmentMapper = departmentMapper;
+    }
+
+    /**
+     * Complète en base les noms de départements absents du jeu de données importé,
+     * en les récupérant sur l'API publique geo.api.gouv.fr.
+     *
+     * <p>Ne fait rien si {@code application.init=false}. Les départements présents dans
+     * l'API mais absents de la base sont ignorés (l'API en renvoie 101, la base en
+     * contient 100 : Mayotte n'y figure pas).</p>
+     *
+     * <p>Déclenché à l'application <em>prête</em> et non par {@code @PostConstruct} :
+     * ce dernier s'exécute <strong>avant</strong> le chargement de {@code data.sql}, donc
+     * la table serait encore vide et aucun nom ne serait mis à jour.</p>
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    public void initData() {
+        if (!initEnabled) {
+            log.info("Initialisation des noms de départements désactivée (application.init=false).");
+            return;
+        }
+
+        DepartmentDto[] departments;
+        try {
+            departments = new RestTemplate().getForObject(GEO_API_URL, DepartmentDto[].class);
+        } catch (RestClientException e) {
+            log.warn("API {} injoignable, noms de départements non initialisés.", GEO_API_URL);
+            return;
+        }
+        if (departments == null) {
+            return;
+        }
+
+        int updated = 0;
+        for (DepartmentDto dto : departments) {
+            // ifPresent : l'API renvoie 101 départements, la base en contient 100
+            // (Mayotte absente). Les codes inconnus sont simplement ignorés.
+            Optional<Department> found = departmentRepository.findByCode(dto.code());
+            if (found.isPresent()) {
+                found.get().setName(dto.name());
+                departmentRepository.save(found.get());
+                updated++;
+            }
+        }
+        log.info("Noms de départements initialisés : {} mis à jour.", updated);
     }
 
     /**
