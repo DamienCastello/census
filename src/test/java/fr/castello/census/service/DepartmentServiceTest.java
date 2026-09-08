@@ -14,6 +14,24 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ *  TESTS AVEC LA BASE H2  —  application complète
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * <p>Rien n'est simulé : {@code @SpringBootTest} démarre l'application et le service
+ * interroge la vraie base H2, remplie par {@code data-test.sql} (100 départements,
+ * 1001 villes). Les assertions portent donc sur de véritables données.</p>
+ *
+ * <p>On teste <strong>l'assemblage réel</strong> des couches : service → repository →
+ * base, requêtes SQL générées comprises. C'est plus lent qu'avec des mocks, mais cela
+ * détecte les erreurs de mapping ou de requête qu'un mock masquerait.</p>
+ *
+ * <p>{@code @Transactional} annule les écritures après chaque test : sans lui, un test
+ * de suppression fausserait le test suivant qui compte les lignes.</p>
+ *
+ * <p>Voir {@code CityServiceTest} pour l'approche inverse, avec Mockito.</p>
+ */
 @SpringBootTest(classes = CensusApplication.class)
 @ActiveProfiles("test")
 @Transactional
