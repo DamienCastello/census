@@ -11,6 +11,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
 
 import java.nio.charset.StandardCharsets;
@@ -28,22 +29,26 @@ public class DepartmentController implements DepartmentControllerDoc {
         this.cityService = cityService;
     }
 
+    @Secured({"ROLE_USER", "ROLE_ADMIN"})
     @GetMapping
     public List<DepartmentDto> getAll() {
         return departmentService.extractAll();
     }
 
+    @Secured({"ROLE_USER", "ROLE_ADMIN"})
     @GetMapping("/{id}")
     public DepartmentDto getDepartment(@PathVariable Long id) throws FunctionalException {
         return departmentService.extractById(id);
     }
 
+    @Secured("ROLE_ADMIN")
     @PostMapping
     public ResponseEntity<DepartmentDto> createDepartment(@RequestBody DepartmentDto department) throws FunctionalException {
         DepartmentDto created = departmentService.createDepartment(department);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
+    @Secured("ROLE_ADMIN")
     @PutMapping("/{id}")
     public DepartmentDto updateDepartment(
             @PathVariable Long id,
@@ -52,12 +57,14 @@ public class DepartmentController implements DepartmentControllerDoc {
         return departmentService.updateDepartment(id, department);
     }
 
+    @Secured("ROLE_ADMIN")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteDepartment(@PathVariable Long id) throws FunctionalException {
         departmentService.deleteDepartment(id);
         return ResponseEntity.noContent().build();
     }
 
+    @Secured("ROLE_ADMIN")
     @PutMapping("/{departmentId}/cities/{cityId}")
     public DepartmentDto assignCity(
             @PathVariable Long departmentId,
@@ -66,6 +73,7 @@ public class DepartmentController implements DepartmentControllerDoc {
         return departmentService.assignCity(departmentId, cityId);
     }
 
+    @Secured({"ROLE_USER", "ROLE_ADMIN"})
     @GetMapping("/{departmentId}/cities/largest")
     public List<CityDto> getLargestCities(
             @PathVariable Long departmentId,
@@ -74,6 +82,7 @@ public class DepartmentController implements DepartmentControllerDoc {
         return cityService.extractLargestByDepartment(departmentId, count);
     }
 
+    @Secured({"ROLE_USER", "ROLE_ADMIN"})
     @GetMapping(value = "/{departmentId}/cities", params = {"minPop", "maxPop"})
     public List<CityDto> getCitiesByPopulation(
             @PathVariable Long departmentId,
@@ -83,6 +92,7 @@ public class DepartmentController implements DepartmentControllerDoc {
         return cityService.extractByPopulationBetweenInDepartment(departmentId, minPop, maxPop);
     }
 
+    @Secured({"ROLE_USER", "ROLE_ADMIN"})
     @GetMapping(value = "/{departmentId}/cities", params = {"population", "!minPop", "!maxPop"})
     public List<CityDto> getCitiesGreaterInDepartment(
             @PathVariable Long departmentId,
@@ -91,6 +101,7 @@ public class DepartmentController implements DepartmentControllerDoc {
         return cityService.extractByPopulationGreaterThanInDepartment(departmentId, population);
     }
 
+    @Secured({"ROLE_USER", "ROLE_ADMIN"})
     @GetMapping(value = "/export/csv", produces = "text/csv")
     public ResponseEntity<String> exportCsv() {
         return ResponseEntity.ok()

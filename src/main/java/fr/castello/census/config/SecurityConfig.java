@@ -1,38 +1,44 @@
 package fr.castello.census.config;
 
-import fr.castello.census.entity.Role;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
+/**
+ * Configuration de la sécurité.
+ *
+ * <p>{@code securedEnabled = true} active la prise en compte de {@code @Secured} sur les
+ * méthodes. Ce n'est <strong>pas</strong> le cas par défaut (seul {@code @PreAuthorize}
+ * l'est) : sans ce réglage, les {@code @Secured} des contrôleurs seraient ignorés
+ * silencieusement, et tout utilisateur authentifié aurait accès à tout.</p>
+ */
 @Configuration
+@EnableMethodSecurity(securedEnabled = true)
 public class SecurityConfig {
+
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        // 1) Active HTTP Basic pour les requêtes protégées
+        // Authentification par HTTP Basic (identifiants dans l'en-tete Authorization).
         http.httpBasic(Customizer.withDefaults());
 
-        // Dans un contexte d’API: désactiver la protection CSRF car vous
-        //n’avez pas de cookie
+        // API sans cookie de session : la protection CSRF n'a pas lieu d'etre.
         http.csrf(AbstractHttpConfigurer::disable);
 
-        // 2) Règles d'autorisation HTTP
-        http.authorizeHttpRequests(auth -> auth
-                // 2a) Toutes les requêtes HTTP GET sont accessibles sans authentification
-                .requestMatchers(HttpMethod.GET, "/cities").hasAnyRole(Role.USER.name(), Role.ADMIN.name())
-                .requestMatchers(HttpMethod.GET, "/departments").hasAnyRole(Role.USER.name(), Role.ADMIN.name())
-                .anyRequest().hasRole(Role.ADMIN.name())
-        );
+        // Le filtre ne verifie plus que l'AUTHENTIFICATION ("qui es-tu ?").
+        // L'AUTORISATION ("as-tu le droit ?") est desormais portee par les @Secured
+        // places sur chaque methode de controleur : la regle vit a cote du code concerne.
+        http.authorizeHttpRequests(auth -> auth.anyRequest().authenticated());
+
         return http.build();
     }
 
     @Bean
-    public BCryptPasswordEncoder getEncoder(){
+    public BCryptPasswordEncoder getEncoder() {
         return new BCryptPasswordEncoder();
     }
 }

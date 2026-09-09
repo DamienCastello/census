@@ -6,7 +6,7 @@ import java.util.Objects;
 
 @Entity
 @Table(name = "cities")
-public class City {
+public class City extends Auditable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;

@@ -12,6 +12,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
 
 import java.nio.charset.StandardCharsets;
@@ -27,26 +28,31 @@ public class CityController implements CityControllerDoc {
         this.cityService = cityService;
     }
 
+    @Secured({"ROLE_USER", "ROLE_ADMIN"})
     @GetMapping(params = {"!name", "!population", "!minPop", "!maxPop"})
     public PageDto<CityDto> getAll(@PageableDefault(size = 20) Pageable pageable) {
         return cityService.extractAll(pageable);
     }
 
+    @Secured({"ROLE_USER", "ROLE_ADMIN"})
     @GetMapping("/{id}")
     public CityDto getCity(@PathVariable Long id) throws FunctionalException {
         return cityService.extractById(id);
     }
 
+    @Secured({"ROLE_USER", "ROLE_ADMIN"})
     @GetMapping(params = {"name", "!population", "!minPop", "!maxPop"})
     public List<CityDto> getCitiesStartWith(@RequestParam String name) throws FunctionalException {
         return cityService.extractByNameStartingWith(name);
     }
 
+    @Secured({"ROLE_USER", "ROLE_ADMIN"})
     @GetMapping(params = {"population", "!name", "!minPop", "!maxPop"})
     public List<CityDto> getCitiesGreater(@RequestParam int population) throws FunctionalException {
         return cityService.extractByPopulationGreaterThan(population);
     }
 
+    @Secured({"ROLE_USER", "ROLE_ADMIN"})
     @GetMapping(params = {"minPop", "maxPop", "!population", "!name"})
     public List<CityDto> getCitiesBetween(
             @RequestParam int minPop,
@@ -55,12 +61,14 @@ public class CityController implements CityControllerDoc {
         return cityService.extractByPopulationBetween(minPop, maxPop);
     }
 
+    @Secured("ROLE_ADMIN")
     @PostMapping
     public ResponseEntity<CityDto> createCity(@RequestBody CityDto city) throws FunctionalException {
         CityDto created = cityService.createCity(city);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
+    @Secured("ROLE_ADMIN")
     @PutMapping("/{id}")
     public CityDto updateCity(
             @PathVariable Long id,
@@ -69,12 +77,14 @@ public class CityController implements CityControllerDoc {
         return cityService.updateCity(id, city);
     }
 
+    @Secured("ROLE_ADMIN")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteCity(@PathVariable Long id) throws FunctionalException {
         cityService.deleteCity(id);
         return ResponseEntity.noContent().build();
     }
 
+    @Secured({"ROLE_USER", "ROLE_ADMIN"})
     @GetMapping(value = "/export/csv", produces = "text/csv")
     public ResponseEntity<String> exportCsv() {
         return ResponseEntity.ok()
