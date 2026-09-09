@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Configuration des logs.
+
+    Un "appender" est une DESTINATION pour les messages de log. On en declare deux :
+      - CONSOLE : la sortie habituelle, pratique pendant le developpement
+      - FILE    : un fichier sur le disque, qui conserve la trace des actions
+                  meme apres l'arret de l'application (c'est ce que demande le TP)
+
+    Le meme message part vers les deux destinations : ce sont deux "robinets"
+    branches sur la meme source.
+-->
+<configuration>
+
+    <!-- Reprend le format colore par defaut de Spring Boot pour la console. -->
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${CONSOLE_LOG_PATTERN}</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/census.log</file>
+
+        <!--
+            Sans rotation, le fichier grossirait indefiniment. Ici on repart d'un
+            fichier neuf chaque jour, et on conserve les 30 derniers (100 Mo maximum).
+        -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>logs/census.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>100MB</totalSizeCap>
+        </rollingPolicy>
+
+        <encoder>
+            <!-- date | niveau | classe | message -->
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} | %-5level | %logger{36} | %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </root>
+
+</configuration>

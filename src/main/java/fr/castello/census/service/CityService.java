@@ -10,6 +10,9 @@ import fr.castello.census.mapper.CityMapper;
 import fr.castello.census.repository.CityRepository;
 import fr.castello.census.repository.DepartmentRepository;
 import fr.castello.census.util.CsvUtils;
+import fr.castello.census.util.CurrentUser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -21,6 +24,8 @@ import java.util.Optional;
 
 @Service
 public class CityService {
+
+    private static final Logger log = LoggerFactory.getLogger(CityService.class);
 
     private final CityRepository cityRepository;
     private final DepartmentRepository departmentRepository;
@@ -128,6 +133,9 @@ public class CityService {
         department.addCity(city);
 
         City created = cityRepository.save(city);
+        log.info("CREATION ville : id={} nom={} population={} departement={} par {}",
+                created.getId(), created.getName(), created.getPopulation(),
+                department.getCode(), CurrentUser.name());
         return cityMapper.toDto(created);
     }
 
@@ -162,6 +170,10 @@ public class CityService {
         existing.setPopulation(dto.population());
         reassignDepartment(existing, department);
 
+        log.info("MODIFICATION ville : id={} nom={} population={} departement={} par {}",
+                existing.getId(), existing.getName(), existing.getPopulation(),
+                department.getCode(), CurrentUser.name());
+
         // Entité gérée : le dirty checking JPA persiste les changements au commit.
         return cityMapper.toDto(existing);
     }
@@ -177,6 +189,8 @@ public class CityService {
         City existing = cityRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Ville non trouvée"));
         cityRepository.delete(existing);
+        log.info("SUPPRESSION ville : id={} nom={} par {}",
+                existing.getId(), existing.getName(), CurrentUser.name());
     }
 
     /**

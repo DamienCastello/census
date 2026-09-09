@@ -9,6 +9,7 @@ import fr.castello.census.mapper.DepartmentMapper;
 import fr.castello.census.repository.CityRepository;
 import fr.castello.census.repository.DepartmentRepository;
 import fr.castello.census.util.CsvUtils;
+import fr.castello.census.util.CurrentUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -135,6 +136,8 @@ public class DepartmentService {
         }
 
         Department created = departmentRepository.save(departmentMapper.toEntity(dto));
+        log.info("CREATION departement : id={} code={} nom={} par {}",
+                created.getId(), created.getCode(), created.getName(), CurrentUser.name());
         return departmentMapper.toDto(created);
     }
 
@@ -161,6 +164,8 @@ public class DepartmentService {
 
         existing.setCode(dto.code());
         existing.setName(dto.name());
+        log.info("MODIFICATION departement : id={} code={} nom={} par {}",
+                existing.getId(), existing.getCode(), existing.getName(), CurrentUser.name());
         return departmentMapper.toDto(existing);
     }
 
@@ -183,6 +188,8 @@ public class DepartmentService {
         }
 
         departmentRepository.delete(existing);
+        log.info("SUPPRESSION departement : id={} code={} par {}",
+                existing.getId(), existing.getCode(), CurrentUser.name());
     }
 
     /**
@@ -208,6 +215,8 @@ public class DepartmentService {
             current.getCities().remove(city);
         }
         department.addCity(city);
+        log.info("RATTACHEMENT ville {} au departement {} par {}",
+                city.getName(), department.getCode(), CurrentUser.name());
 
         return departmentMapper.toDto(department);
     }
