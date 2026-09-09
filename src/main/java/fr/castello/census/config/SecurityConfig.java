@@ -24,8 +24,8 @@ public class SecurityConfig {
         // 2) Règles d'autorisation HTTP
         http.authorizeHttpRequests(auth -> auth
                 // 2a) Toutes les requêtes HTTP GET sont accessibles sans authentification
-                .requestMatchers(HttpMethod.GET, "/cities").hasRole(Role.USER.name())
-                .requestMatchers(HttpMethod.GET, "/departments").hasRole(Role.USER.name())
+                .requestMatchers(HttpMethod.GET, "/cities").hasAnyRole(Role.USER.name(), Role.ADMIN.name())
+                .requestMatchers(HttpMethod.GET, "/departments").hasAnyRole(Role.USER.name(), Role.ADMIN.name())
                 .anyRequest().hasRole(Role.ADMIN.name())
         );
         return http.build();
