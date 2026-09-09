@@ -5,13 +5,12 @@ import fr.castello.census.entity.User;
 import fr.castello.census.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -51,10 +50,10 @@ public class JpaUserDetailsService implements UserDetailsService {
      * <p>Le mot de passe n'est <strong>jamais</strong> stocké en clair : BCrypt en garde
      * une empreinte non réversible, que Spring Security compare à la saisie.</p>
      *
-     * <p>Déclenché à l'application prête (et non par {@code @PostConstruct}) pour être sûr
-     * que le schéma est créé. Le test « table vide » le rend rejouable sans risque.</p>
+     * <p>Appelée par {@code DataConfig}, qui décide s'il faut l'exécuter. Le test
+     * « table vide » la rend rejouable sans risque.</p>
      */
-    @EventListener(ApplicationReadyEvent.class)
+    @Transactional
     public void initData() {
         if (userRepository.count() > 0) {
             return;

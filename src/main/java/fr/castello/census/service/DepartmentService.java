@@ -9,11 +9,8 @@ import fr.castello.census.mapper.DepartmentMapper;
 import fr.castello.census.repository.CityRepository;
 import fr.castello.census.repository.DepartmentRepository;
 import fr.castello.census.util.CsvUtils;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClientException;
@@ -32,10 +29,6 @@ public class DepartmentService {
     private final CityRepository cityRepository;
     private final DepartmentMapper departmentMapper;
 
-    /** Active ou non l'initialisation des noms de départements au démarrage. */
-    @Value("${application.init}")
-    private boolean initEnabled;
-
     public DepartmentService(DepartmentRepository departmentRepository,
                              CityRepository cityRepository,
                              DepartmentMapper departmentMapper) {
@@ -48,21 +41,15 @@ public class DepartmentService {
      * Complète en base les noms de départements absents du jeu de données importé,
      * en les récupérant sur l'API publique geo.api.gouv.fr.
      *
-     * <p>Ne fait rien si {@code application.init=false}. Les départements présents dans
-     * l'API mais absents de la base sont ignorés (l'API en renvoie 101, la base en
-     * contient 100 : Mayotte n'y figure pas).</p>
+     * <p>Les départements présents dans l'API mais absents de la base sont ignorés
+     * (l'API en renvoie 101, la base en contient 100 : Mayotte n'y figure pas).</p>
      *
-     * <p>Déclenché à l'application <em>prête</em> et non par {@code @PostConstruct} :
-     * ce dernier s'exécute <strong>avant</strong> le chargement de {@code data.sql}, donc
-     * la table serait encore vide et aucun nom ne serait mis à jour.</p>
+     * <p>Appelée par {@code DataConfig}, qui décide s'il faut l'exécuter. Comme l'appel
+     * vient d'un <em>autre</em> bean, il passe par le proxy Spring et {@code @Transactional}
+     * s'applique : les 100 mises à jour forment une seule transaction.</p>
      */
-    @EventListener(ApplicationReadyEvent.class)
+    @Transactional
     public void initData() {
-        if (!initEnabled) {
-            log.info("Initialisation des noms de départements désactivée (application.init=false).");
-            return;
-        }
-
         DepartmentDto[] departments;
         try {
             departments = new RestTemplate().getForObject(GEO_API_URL, DepartmentDto[].class);
