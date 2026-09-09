@@ -4,11 +4,13 @@ import fr.castello.census.dto.CityDto;
 import fr.castello.census.dto.PageDto;
 import fr.castello.census.exception.FunctionalException;
 import fr.castello.census.exception.NotFoundException;
+import fr.castello.census.security.JwtUtil;
 import fr.castello.census.service.CityService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -47,6 +49,14 @@ public class CityControllerTest {
     /** Remplace le vrai CityService par un mock dans le contexte Spring. */
     @MockitoBean
     private CityService cityService;
+
+    // Le filtre JWT est un @Component : @WebMvcTest le charge. Ses dependances ne font
+    // pas partie de la tranche web, on les simule pour que le contexte demarre.
+    @MockitoBean
+    private JwtUtil jwtUtil;
+
+    @MockitoBean
+    private UserDetailsService userDetailsService;
 
     @Test
     void testGetCity() throws Exception {
